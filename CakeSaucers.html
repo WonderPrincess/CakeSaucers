@@ -1,0 +1,738 @@
+<html>
+	
+	<head>
+		<title></title>
+		
+		
+		
+		
+		<script language="Javascript">
+		
+			const KEYLEFT = 37;
+			const KEYUP = 38;
+			const KEYRIGHT = 39;
+			const KEYDOWN = 40;
+			
+			const a_KEYLEFT = 65;
+			const w_KEYUP = 87;
+			const d_KEYRIGHT = 68;
+			const s_KEYDOWN = 83;
+
+			const SCREEN_WIDTH = 800;
+			const SCREEN_HEIGHT = 600;
+			
+			const SPEED = 6;
+			const MAX_SPEED = 18;
+			
+			const REFRESH_RATE = 40;
+			
+			const MAX_AMMO = 10;
+			const BULLET_WIDTH = 32;
+			
+			const SAUCER_WIDTH = 100;
+			const SAUCER_HEIGHT = 72;
+			
+			const MAX_CAKES = 13; //-1 initial
+			const CAKE_WIDTH = 54;
+			const CAKE_HEIGHT = 54;
+			
+			var g_bullets = Array();
+			var g_number_of_bullets = 0;
+			var g_ammo_counter = MAX_AMMO;
+			var g_bullets_loader = Array();
+			
+			var g_cakes_counter = MAX_CAKES;
+			var g_cake;
+			
+			var g_play = true;
+		
+			function create_saucer()
+			{				
+				var new_saucer =
+				{
+					obj:0,
+					px:0,
+					py:0,
+					x_speed : 0,
+					y_speed : 0,
+								
+					x_timer:0,
+					y_timer:0
+				};
+				
+								
+				return new_saucer;
+				
+			}
+			
+			
+			function create_cake()
+			{				
+				var new_cake =
+				{
+					obj: document.getElementById("cake"),
+					px: Math.random() * (SCREEN_WIDTH - CAKE_WIDTH),
+					py: Math.random() * (SCREEN_HEIGHT - CAKE_HEIGHT),
+				};
+				
+				return new_cake;
+			}
+			
+			
+			var g_player1 = create_saucer();
+			var g_player2 = create_saucer();
+			
+				
+		
+		
+			function init()
+			{
+				//sets screen
+				zone = document.getElementById("playZone");
+				
+				zone.style.position = "relative";
+				zone.style.width = SCREEN_WIDTH;
+				zone.style.height = SCREEN_HEIGHT;
+				
+				//sets saucers
+				document.getElementById("saucer1").style.left = (SCREEN_WIDTH / 3 * 2  - SAUCER_WIDTH / 2) + "px";
+				document.getElementById("saucer1").style.top = (SCREEN_HEIGHT / 2 - SAUCER_HEIGHT / 2) + "px";
+				document.getElementById("saucer1").style.width = SAUCER_WIDTH;
+				document.getElementById("saucer1").style.height = SAUCER_HEIGHT;
+				
+				document.getElementById("saucer2").style.left = (SCREEN_WIDTH / 3 - SAUCER_WIDTH / 2) + "px";
+				document.getElementById("saucer2").style.top = (SCREEN_HEIGHT / 2 - SAUCER_HEIGHT / 2) + "px";
+				document.getElementById("saucer2").style.width = SAUCER_WIDTH;
+				document.getElementById("saucer2").style.height = SAUCER_HEIGHT;
+				
+				
+				//creates and places first cake
+				refresh_cake();
+				
+				//sets counters
+				document.getElementById("ammo_counter").innerHTML = g_ammo_counter / 2 + " ammo";
+				document.getElementById("cake_counter").innerHTML = g_cakes_counter + " cakes";
+				
+				
+				//sets players
+				g_player1.obj = document.getElementById("saucer1");
+				g_player1.px = parseInt(g_player1.obj.style.left);
+				g_player1.py = parseInt(g_player1.obj.style.top);
+				
+				g_player2.obj = document.getElementById("saucer2");
+				g_player2.px = parseInt(g_player2.obj.style.left);
+				g_player2.py = parseInt(g_player2.obj.style.top);
+				
+								
+				
+				//preload images
+				for (var i = 0; i < 10; ++i)
+				{
+					g_bullets_loader[i] = new Image();
+					g_bullets_loader[i].src = "images/bullet" + i + ".png";
+				}
+				
+				g_bullets_loader[10] = new Image();
+				g_bullets_loader[10].src = "images/explosionbig.gif";
+			}
+		
+		
+		
+			function processKeyEvent(e)	
+			{
+				//alert(e.keyCode);
+				if (!g_play)
+					return;
+				
+				g_player1.obj = document.getElementById("saucer1");
+				g_player1.px = parseInt(g_player1.obj.style.left);
+				g_player1.py = parseInt(g_player1.obj.style.top);
+				
+				g_player2.obj = document.getElementById("saucer2");
+				g_player2.px = parseInt(g_player2.obj.style.left);
+				g_player2.py = parseInt(g_player2.obj.style.top);
+				
+				switch(e.keyCode)
+				{
+					case KEYRIGHT 	: displace_x(1, g_player1);	break;
+					case KEYLEFT 	: displace_x(-1, g_player1);	break;
+					case KEYUP 		: displace_y(-1, g_player1);	break;
+					case KEYDOWN 	: displace_y(1, g_player1);	break;
+					
+					case d_KEYRIGHT : displace_x(1, g_player2);	break;
+					case a_KEYLEFT	: displace_x(-1, g_player2);	break;
+					case w_KEYUP 	: displace_y(-1, g_player2);	break;
+					case s_KEYDOWN	: displace_y(1, g_player2);	break;
+					
+					default : break;
+				}
+				
+				refresh_player(g_player1);
+				refresh_player(g_player2);
+			}
+			
+			
+			function displace_x(p_direction, p_player)
+			{
+				clearInterval(p_player.x_timer);
+				
+				p_player.x_speed += (SPEED * p_direction);
+				
+				if (p_player.x_speed >= MAX_SPEED)
+					p_player.x_speed = MAX_SPEED;
+				
+				else if (p_player.x_speed <= -MAX_SPEED)
+					p_player.x_speed = -MAX_SPEED;
+					
+				p_player.x_timer = setInterval(function() {p_player.px += p_player.x_speed;  refresh_player(p_player);}, REFRESH_RATE);
+			}
+			
+			
+			
+			function displace_y(p_direction, p_player)
+			{
+				clearInterval(p_player.y_timer);
+				
+				p_player.y_speed += (SPEED * p_direction);
+				
+				if (p_player.y_speed >= MAX_SPEED)
+					p_player.y_speed = MAX_SPEED;
+					
+				else if (p_player.y_speed <= -MAX_SPEED)
+					p_player.y_speed = -MAX_SPEED;
+				
+				p_player.y_timer = setInterval(function() {p_player.py += p_player.y_speed; refresh_player(p_player);}, REFRESH_RATE);
+			}
+			
+			
+			
+			function refresh_player(p_player)
+			{
+				check_frontier(p_player);
+								
+				p_player.obj.style.left = p_player.px + "px";
+				p_player.obj.style.top = p_player.py + "px";
+				
+				check_collision_players(g_player1, g_player2);
+				check_collision_cake(p_player);
+			}
+			
+			
+			
+			function check_frontier(p_unit)
+			{
+				var half_width = (parseInt(p_unit.obj.clientWidth) / 2);
+				var half_height = (parseInt(p_unit.obj.clientHeight) / 2);
+				
+				if (p_unit.px + half_width >= 1 + SCREEN_WIDTH) {
+					p_unit.px = -half_width;}
+					
+				else if (p_unit.px <= -1 - half_width)
+					p_unit.px = SCREEN_WIDTH - half_width;
+					
+				if (p_unit.py + half_height >= 1 + SCREEN_HEIGHT)
+					p_unit.py = -half_height;
+					
+				else if (p_unit.py <= -1 - half_height)
+					p_unit.py = SCREEN_HEIGHT - half_height;
+			}
+		
+		
+		
+			function check_collision_players(p_unit1, p_unit2)
+			{
+				var x1a = p_unit1.px;
+				var x2a = p_unit1.px + parseInt(p_unit1.obj.clientWidth);
+				var y1a = p_unit1.py;
+				var y2a = p_unit1.py + parseInt(p_unit1.obj.clientHeight);
+				
+				var x1b = p_unit2.px;
+				var x2b = p_unit2.px + parseInt(p_unit2.obj.clientWidth);
+				var y1b = p_unit2.py;
+				var y2b = p_unit2.py + parseInt(p_unit2.obj.clientHeight);
+				
+
+						
+				//si ces 4 collisions sont vraies, alors il y a collision.
+				if (y2a >= y1b && y1a <= y2b && x2a >= x1b && x1a <= x2b)
+				{
+					//si collision horizontale
+					if (x2a <= x1b + MAX_SPEED || x1a >= x2b - MAX_SPEED)
+					{
+						var signet_speed = p_unit1.x_speed;
+					
+						p_unit1.x_speed = p_unit2.x_speed;
+						p_unit2.x_speed = signet_speed;
+						
+						p_unit1.px += p_unit1.x_speed;
+						p_unit2.px += p_unit2.x_speed;
+						
+						clearInterval(p_unit1.x_timer);
+						clearInterval(p_unit2.x_timer);
+						p_unit1.x_timer = setInterval(function() {p_unit1.px += p_unit1.x_speed;  refresh_player(p_unit1);}, REFRESH_RATE);
+						p_unit2.x_timer = setInterval(function() {p_unit2.px += p_unit2.x_speed;  refresh_player(p_unit2);}, REFRESH_RATE);
+					}
+					
+					
+					//si collision verticale
+					else if (y2a <= y1b + MAX_SPEED || y1a >= y2b - MAX_SPEED)
+					{
+						var signet_speed = p_unit1.y_speed;
+					
+						p_unit1.y_speed = p_unit2.y_speed;
+						p_unit2.y_speed = signet_speed;
+						
+						p_unit1.py += p_unit1.y_speed;
+						p_unit2.py += p_unit2.y_speed;
+						
+						clearInterval(p_unit1.y_timer);
+						clearInterval(p_unit2.y_timer);
+						p_unit1.y_timer = setInterval(function() {p_unit1.py += p_unit1.y_speed;  refresh_player(p_unit1);}, REFRESH_RATE);
+						p_unit2.y_timer = setInterval(function() {p_unit2.py += p_unit2.y_speed;  refresh_player(p_unit2);}, REFRESH_RATE);
+					}
+					
+					
+					 //S'il y a collision mais que les conditions ci-dessus sont fausses, alors les units sont superposés
+					 //à cause du warp des extrêmes de l'écran.
+					 //Si l'on se contente des conditions ci-dessous sans précéder de celles ci-dessus, on obtient que les
+					 //collisions s'effectuent toujours en X ET Y, ce qui n'est pas le résultat voulu.
+					else
+					{
+						//change la vitesse selon la collision
+						var signet_speed_x = p_unit1.x_speed;
+						var signet_speed_y = p_unit1.y_speed;
+					
+						p_unit1.x_speed = p_unit2.x_speed;
+						p_unit2.x_speed = signet_speed_x;
+						p_unit1.y_speed = p_unit2.y_speed;
+						p_unit2.y_speed = signet_speed_y;
+						
+						
+						//change la position pour décoller les saucers
+						var half_width1 = (parseInt(p_unit1.obj.clientWidth) / 2);
+						var half_height1 = (parseInt(p_unit1.obj.clientHeight) / 2);
+						var half_width2 = (parseInt(p_unit2.obj.clientWidth) / 2);
+						var half_height2 = (parseInt(p_unit2.obj.clientHeight) / 2);
+												
+						if (p_unit1.px < p_unit2.px)
+						{
+							p_unit1.px -= half_width2;
+							p_unit2.px += half_width1;
+						}
+						
+						else
+						{
+							p_unit1.px += half_width2;
+							p_unit2.px -= half_width1;
+						}
+						
+						if (p_unit1.py < p_unit2.py)
+						{
+							p_unit1.py -= half_height2;
+							p_unit2.py += half_height1;
+						}
+						
+						else
+						{
+							p_unit1.py += half_height2;
+							p_unit2.py -= half_height1;
+						}
+	
+						
+						//applique les nouvelles vitesses
+						clearInterval(p_unit1.x_timer);
+						clearInterval(p_unit2.x_timer);
+						clearInterval(p_unit1.y_timer);
+						clearInterval(p_unit2.y_timer);
+						p_unit1.x_timer = setInterval(function() {p_unit1.px += p_unit1.x_speed;  refresh_player(p_unit1);}, REFRESH_RATE);
+						p_unit2.x_timer = setInterval(function() {p_unit2.px += p_unit2.x_speed;  refresh_player(p_unit2);}, REFRESH_RATE);
+						p_unit1.y_timer = setInterval(function() {p_unit1.py += p_unit1.y_speed;  refresh_player(p_unit1);}, REFRESH_RATE);
+						p_unit2.y_timer = setInterval(function() {p_unit2.py += p_unit2.y_speed;  refresh_player(p_unit2);}, REFRESH_RATE);
+						
+					}
+				}						
+			}
+			
+			
+			function processMouseEvent(e)
+			{
+				if (!g_play)
+					return;
+				
+				if (g_ammo_counter < 1)
+					return;
+				
+				var x_dest= (e.clientX - BULLET_WIDTH / 2);
+				var y_dest= (e.clientY - BULLET_WIDTH / 2);
+				
+				
+				//calcule par rapport à g_player1
+					//ceci cible le centre du vaisseau, d'où sera calculé l'apparition du bullet
+					var x_origin1 = g_player1.px + parseInt(g_player1.obj.clientWidth) / 2;
+					var y_origin1 = g_player1.py + parseInt(g_player1.obj.clientHeight) / 2;
+					//le bullet apparaît à ce entre + width + height du tireur, puis procède à une vitesse de MAX_SPEED
+					
+					//calcule la déviation de la ligne formé entre les coordonnées d'origine et de la souris
+					var deviation_x1 = x_dest - x_origin1;
+					var deviation_y1 = y_dest - y_origin1;
+					
+					//calcule l'angle entre le plancher et la ligne formée
+					var angle1 = Math.atan2(deviation_y1, deviation_x1);
+										
+					//calcule la variation de X et de Y par à rapport à la ligne (l'hypothénuse) de longueur MAX_SPEED
+					var x_variation1 = Math.cos(angle1) * MAX_SPEED / 3; //voyage au tier de la maxspeed des saucers
+					var y_variation1 = Math.sin(angle1) * MAX_SPEED / 3;
+					
+					
+					
+					
+					
+				//calcule par rapport à g_player2
+					//ceci cible le centre du vaisseau, d'où sera calculé l'apparition du bullet
+					var x_origin2 = g_player2.px + parseInt(g_player2.obj.clientWidth) / 2;
+					var y_origin2 = g_player2.py + parseInt(g_player2.obj.clientHeight) / 2;
+					//le bullet apparaît à ce entre + width + height du tireur, puis procède à une vitesse de MAX_SPEED
+					
+					//calcule la déviation de la ligne formé entre les coordonnées d'origine et de la souris
+					var deviation_x2 = x_dest - x_origin2;
+					var deviation_y2 = y_dest - y_origin2;
+					
+					//calcule l'angle entre le plancher et la ligne formée
+					var angle2 = Math.atan2(deviation_y2, deviation_x2);
+									
+					//calcule la variation de X et de Y par à rapport à la ligne (l'hypothénuse) de longueur MAX_SPEED
+					var x_variation2 = Math.cos(angle2) * MAX_SPEED / 3; //voyage au tier de la maxspeed des saucers
+					var y_variation2 = Math.sin(angle2) * MAX_SPEED / 3;
+				
+				
+				
+				
+				//fait apparaître le bullet, et le fait voyager en ligne droite à vitesse MAX_SPEED
+				;
+				processBullet(x_origin1, y_origin1, x_variation1, y_variation1);
+				processBullet(x_origin2, y_origin2, x_variation2, y_variation2);				
+					
+			}
+			
+			
+			function processBullet(p_x_origin, p_y_origin, p_x_variation, p_y_variation)
+			{
+				g_ammo_counter--
+				
+				var bullet_number = g_number_of_bullets;
+				
+				g_bullets[bullet_number] = create_bullet(p_x_origin, p_y_origin, p_x_variation, p_y_variation, bullet_number);
+				
+				g_number_of_bullets ++;
+				if (g_number_of_bullets >= MAX_AMMO)
+					g_number_of_bullets = 0;
+				
+				g_bullets[bullet_number].x_timer = setInterval(function()
+				{
+					g_bullets[bullet_number].px += g_bullets[bullet_number].x_speed;
+					refresh_bullet(g_bullets[bullet_number]);
+				}, REFRESH_RATE);
+				
+				g_bullets[bullet_number].y_timer = setInterval(function()
+				{
+					g_bullets[bullet_number].py += g_bullets[bullet_number].y_speed;
+					refresh_bullet(g_bullets[bullet_number]);
+				}, REFRESH_RATE);
+				
+				
+			}
+			
+			function create_bullet(p_x_origin, p_y_origin, p_x_variation, p_y_variation, p_bullet_number)
+			{
+				
+				var new_bullet =
+				{
+					obj : document.getElementById("bullet" + p_bullet_number),
+					
+					px : p_x_origin - BULLET_WIDTH / 2,
+					py : p_y_origin - BULLET_WIDTH / 2,
+					
+					x_speed : p_x_variation,
+					y_speed : p_y_variation,
+								
+					x_timer:0,
+					y_timer:0,
+					
+					image_counter:1,
+					
+					dangerous: false,
+					dangerous_counter: 1500,
+					lifetime: REFRESH_RATE * 25 * 8 //4 secondes
+				};
+				
+				return new_bullet;
+			}
+			
+			
+			function refresh_bullet(p_bullet)
+			{
+				check_frontier(p_bullet);
+								
+				p_bullet.obj.style.left = p_bullet.px + "px";
+				p_bullet.obj.style.top = p_bullet.py + "px";
+								
+				p_bullet.lifetime -= REFRESH_RATE;
+				
+				p_bullet.obj.src = g_bullets_loader[p_bullet.image_counter].src;
+				p_bullet.image_counter++;
+				if (p_bullet.image_counter > 9) p_bullet.image_counter = 0;
+				
+				//compte 1500 ms avant que le bullet soit dangerous, pour ne pas tuer lors du tir
+				if (p_bullet.dangerous_counter < 0)
+					p_bullet.dangerous = true;
+					
+				else p_bullet.dangerous_counter -= REFRESH_RATE;
+				
+				
+				if (p_bullet.dangerous)
+				{
+					check_collision_bullet(p_bullet, g_player1);
+					check_collision_bullet(p_bullet, g_player2);
+				}
+				
+				//if lifetime is depleted, "destroy" the bullet
+				if (p_bullet.lifetime < 0)
+				{
+					clearInterval(p_bullet.x_timer);
+					clearInterval(p_bullet.y_timer);
+					
+					p_bullet.px = -100;
+					p_bullet.py = -100;
+					
+					p_bullet.obj.style.left = p_bullet.px + "px";
+					p_bullet.obj.style.top = p_bullet.py + "px";
+					
+					g_ammo_counter++; 
+				}
+				
+				document.getElementById("ammo_counter").innerHTML = g_ammo_counter / 2 + " ammo";
+			}
+			
+			
+			function check_collision_bullet(p_bullet, p_player)
+			{
+				var x1a = p_bullet.px;
+				var x2a = p_bullet.px + parseInt(p_bullet.obj.clientWidth);
+				var y1a = p_bullet.py;
+				var y2a = p_bullet.py + parseInt(p_bullet.obj.clientHeight);
+				
+				var x1b = p_player.px + SAUCER_WIDTH / 4;
+				var x2b = p_player.px + parseInt(p_player.obj.clientWidth) - SAUCER_WIDTH / 4;
+				var y1b = p_player.py + SAUCER_HEIGHT / 4;
+				var y2b = p_player.py + parseInt(p_player.obj.clientHeight) - SAUCER_HEIGHT / 4;
+				
+
+				//si ces 4 collisions sont vraies, alors il y a collision.
+				if (y2a >= y1b && y1a <= y2b && x2a >= x1b && x1a <= x2b)
+				{
+					p_player.obj.src = g_bullets_loader[10].src;
+					setInterval(function()
+					{
+						p_player.obj.src = "images/dot.png";
+						p_player.obj.style.width = "20px";
+						p_player.obj.style.height = "20px";
+						p_player.obj.style.left = (p_player.px + SAUCER_WIDTH / 2 - 10)+ "px"; //le -10 est pour la moitié du 20px juste au-dessus
+						p_player.obj.style.top = (p_player.py + SAUCER_HEIGHT / 2 - 10)+ "px";
+					}, 5000);
+					
+					var counter = 5;
+					
+					if (g_play)
+					{
+						document.getElementById("output_winner").innerHTML = counter + "...";
+						final_countdown(counter);
+					}
+					
+					g_play = false;
+				}
+			}
+			
+			function final_countdown(p_counter)
+			{
+				setTimeout(function()
+					{
+						if (g_cakes_counter > 0)
+						{
+							if (p_counter > 1)
+							{
+								p_counter--;
+								document.getElementById("output_winner").innerHTML = p_counter + "...";
+								final_countdown(p_counter);
+							}
+							
+							else
+							{
+								g_cake.obj.style.left = "-100px";
+								g_cake.obj.style.top = "-100px";
+								document.getElementById("output_winner").innerHTML = "Player 3 wins!";
+							}
+						}
+						
+						else return;
+					}, 1000);
+			}
+			
+			function refresh_cake()
+			{
+				g_cakes_counter--;
+				
+				if (g_cakes_counter < 1)
+				{
+					g_cake.obj.style.left = "-100px";
+					g_cake.obj.style.top = "-100px";
+					document.getElementById("cake_counter").innerHTML = g_cakes_counter + " cakes";
+					g_play = false;
+					document.getElementById("output_winner").innerHTML = "Players 1 and 2 win!<br />The Cake wasn't a lie!";
+					document.getElementById("final_cake").style.position = "absolute";
+					document.getElementById("final_cake").style.left = SCREEN_WIDTH / 2 + "px";
+					document.getElementById("final_cake").style.top = SCREEN_HEIGHT / 2 + "px";
+					document.getElementById("final_cake").src = "images/cake.png";
+					return;
+				}
+				
+				g_cake = create_cake();
+				
+				g_cake.obj.style.left = g_cake.px + "px";
+				g_cake.obj.style.top = g_cake.py + "px";
+				
+				document.getElementById("cake_counter").innerHTML = g_cakes_counter + " cakes";
+			}
+			
+			function check_collision_cake(p_player)
+			{
+				var x1a = g_cake.px;
+				var x2a = g_cake.px + parseInt(g_cake.obj.clientWidth);
+				var y1a = g_cake.py;
+				var y2a = g_cake.py + parseInt(g_cake.obj.clientHeight);
+				
+				var x1b = p_player.px + SAUCER_WIDTH / 5;
+				var x2b = p_player.px + parseInt(p_player.obj.clientWidth) - SAUCER_WIDTH / 5;
+				var y1b = p_player.py + SAUCER_HEIGHT / 5;
+				var y2b = p_player.py + parseInt(p_player.obj.clientHeight) - SAUCER_HEIGHT / 5;
+				
+
+				//si ces 4 collisions sont vraies, alors il y a collision.
+				if (y2a >= y1b && y1a <= y2b && x2a >= x1b && x1a <= x2b)
+				{
+					g_cake = create_cake();
+					refresh_cake();
+				}
+			}
+		</script>
+		
+		
+		<style type="text/css">
+			div.main
+			{
+				position:relative;
+				background-image:url("images/space.jpg");
+				background-size:100%;
+				background-repeat:no-repeat;
+			}
+			
+			img
+			{
+				position:absolute;
+			}
+			
+			img.bullet
+			{
+				position:absolute;
+				top:-100px;
+				left:-100px;
+				width:32px;
+				height:32px;
+			}
+			
+			img.cake
+			{
+				position:absolute;
+				top:-100px;
+				left:-100px;
+				width:54px;
+				height:54px;
+			}
+			
+			h2
+			{
+				color:#4ff4d9;
+				font-size:36px;
+				text-align:right;
+				margin-right:12px;
+				margin:0px;
+			}
+			
+			h1
+			{
+				color:#4ff4d9;
+				font-size:48px;
+				text-align:center;
+			}
+		</style>
+		
+	</head>
+	
+	<body onKeyUp="processKeyEvent(event)" onLoad="init()" onClick="processMouseEvent(event)" >
+		<div id="playZone" class="main">
+			
+			<h2 id="ammo_counter"></h2>
+			<h2 id="cake_counter"></h2>
+			<br />
+			<h1 id="output_winner"></h1>
+			<br />
+			<img id="final_cake" />
+			
+			
+			<img id="saucer1" src = "images/saucerA.gif" />
+			<img id="saucer2" src = "images/saucerB.gif" />
+						
+			<img id="bullet0" src = "images/bullet0.png" class='bullet' />
+			<img id="bullet1" src = "images/bullet0.png" class='bullet' />
+			<img id="bullet2" src = "images/bullet0.png" class='bullet' />
+			<img id="bullet3" src = "images/bullet0.png" class='bullet' />
+			<img id="bullet4" src = "images/bullet0.png" class='bullet' />
+			<img id="bullet5" src = "images/bullet0.png" class='bullet' />
+			<img id="bullet6" src = "images/bullet0.png" class='bullet' />
+			<img id="bullet7" src = "images/bullet0.png" class='bullet' />
+			<img id="bullet8" src = "images/bullet0.png" class='bullet' />
+			<img id="bullet9" src = "images/bullet0.png" class='bullet' />
+			
+			<img id="cake" src = "images/cake.png" class='cake' />
+
+		</div>
+		
+		<p>
+			PLAYER 1 : Use W A S D to move. <br / >
+			PLAYER 2 : Use arrows to move. <br />
+			PLAYER 3 : Use mouse to shoot. <br />
+			<br />
+			Players 1 and 2 win when they catch a total of 20 cakes. <br />
+			<br />
+			Player 3 wins if a saucer explodes.<br />
+			<br />
+			
+			<form>
+				<input type="button" onClick="location.reload()" value="RESET" />
+			</form>
+			
+			<br />
+			
+			<audio controls>
+				<source src="FortressOfDoom.ogg" type="audio/ogg" />
+				<source src="FortressOfDoom.mp3" type="audio/mpeg" />
+				Your browser does not support the audio element.
+			</audio>
+		</p>
+		
+		
+		
+		
+
+	</body>
+	
+</html>
